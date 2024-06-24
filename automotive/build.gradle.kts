@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.helloworld"
+    namespace = "com.example.HardwareInfo"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.helloworld"
+        applicationId = "com.example.HardwareInfo"
         minSdk = 28
         targetSdk = 34
         versionCode = 1
@@ -36,6 +36,8 @@ android {
 }
 
 dependencies {
+    implementation("androidx.car.app:app:1.4.0")
+    implementation("androidx.car.app:app-projected:1.4.0")
     implementation(libs.androidx.app)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

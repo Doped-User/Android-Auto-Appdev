@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "helloworld"
+rootProject.name = "HardwareInfo"
 include(":automotive")
  

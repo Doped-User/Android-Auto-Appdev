@@ -1,4 +1,4 @@
 <resources>
-
-    <style name="Theme.HelloWorld" parent="android:Theme.Material.Light.DarkActionBar" />
+    <style name="Theme.HardwareInfo" parent="android:Theme.Material.Light.DarkActionBar" />
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar" />
 </resources>
