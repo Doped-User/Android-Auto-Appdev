@@ -9,8 +9,6 @@ public final class HardwareInfoSession extends Session {
     @Override
     @NonNull
     public Screen onCreateScreen(@NonNull Intent intent) {
-        String carData = intent.getStringExtra("car_data");
-        HardwareInfoService.broadcastCarData(carData, getCarContext());
         return new HardwareInfoScreen(getCarContext());
     }
 }

@@ -2,6 +2,7 @@ package com.example.HardwareInfo;
 
 import java.util.HashMap;
 import java.util.Map;
+import android.content.Intent;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.car.app.CarContext;
@@ -25,6 +26,7 @@ import java.util.concurrent.Executor;
 public final class HardwareInfoScreen extends Screen {
 
     private static final String TAG = "HardwareInfoScreen";
+    private static final String ACTION_SEND_CAR_DATA = "com.example.HardwareInfo.SEND_CAR_DATA";
 
     private boolean mHasModelPermission;
     private boolean mHasEnergyProfilePermission;
@@ -37,6 +39,7 @@ public final class HardwareInfoScreen extends Screen {
         synchronized (this) {
             Log.i(TAG, "Received model information: " + data);
             mModel = data;
+            broadcastCarData();
             invalidate();
         }
     };
@@ -45,6 +48,7 @@ public final class HardwareInfoScreen extends Screen {
         synchronized (this) {
             Log.i(TAG, "Received energy profile information: " + data);
             mEnergyProfile = data;
+            broadcastCarData();
             invalidate();
         }
     };
@@ -177,6 +181,23 @@ public final class HardwareInfoScreen extends Screen {
     private boolean allInfoAvailable() {
         return (!mHasModelPermission || mModel != null) &&
                 (!mHasEnergyProfilePermission || mEnergyProfile != null);
+    }
+
+    private void broadcastCarData() {
+        if (allInfoAvailable()) {
+            StringBuilder carDataBuilder = new StringBuilder();
+            if (mModel != null) {
+                carDataBuilder.append("Model: ").append(getModelInfo()).append("\n");
+            }
+            if (mEnergyProfile != null) {
+                carDataBuilder.append("Energy Profile: ").append(getFuelInfo()).append("\n");
+                carDataBuilder.append("EV Info: ").append(getEvInfo()).append("\n");
+            }
+            String carData = carDataBuilder.toString();
+            Intent intent = new Intent(ACTION_SEND_CAR_DATA);
+            intent.putExtra("car_data", carData);
+            getCarContext().sendBroadcast(intent);
+        }
     }
 
     static class ConnectorUtil {
