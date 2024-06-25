@@ -16,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
     private final BroadcastReceiver carDataReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if ("com.example.HardwareInfo.CAR_DATA_ACTION".equals(intent.getAction())) {
+            if ("com.example.HardwareInfo.SEND_CAR_DATA".equals(intent.getAction())) {
                 String carData = intent.getStringExtra("car_data");
                 carDataTextView.setText(carData);
             }
@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        registerReceiver(carDataReceiver, new IntentFilter("com.example.HardwareInfo.CAR_DATA_ACTION"), Context.RECEIVER_NOT_EXPORTED);
+        registerReceiver(carDataReceiver, new IntentFilter("com.example.HardwareInfo.SEND_CAR_DATA"), Context.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

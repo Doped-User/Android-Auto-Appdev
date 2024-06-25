@@ -11,9 +11,9 @@ public class CarDataReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if ("com.example.HardwareInfo.CAR_DATA_ACTION".equals(intent.getAction())) {
+        if ("com.example.HardwareInfo.SEND_CAR_DATA".equals(intent.getAction())) {
             String carData = intent.getStringExtra("car_data");
-            Log.d("CarDataReceiver", "Received car data: " + carData);
+            Log.d(TAG, "Received car data: " + carData);
             Intent displayIntent = new Intent(context, MainActivity.class);
             displayIntent.putExtra("car_data", carData);
             displayIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -21,3 +21,5 @@ public class CarDataReceiver extends BroadcastReceiver {
         }
     }
 }
+
+
