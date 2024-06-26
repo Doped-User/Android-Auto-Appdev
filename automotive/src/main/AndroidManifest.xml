@@ -40,7 +40,7 @@
 
         <meta-data
             android:name="androidx.car.app.minCarApiLevel"
-            android:value="1"/>
+            android:value="3"/>
 
         <service
             android:name="com.example.HardwareInfo.HardwareInfoService"

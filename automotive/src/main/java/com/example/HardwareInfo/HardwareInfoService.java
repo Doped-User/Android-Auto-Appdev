@@ -5,8 +5,6 @@ import androidx.car.app.CarAppService;
 import androidx.car.app.Session;
 import androidx.car.app.SessionInfo;
 import androidx.car.app.validation.HostValidator;
-import android.content.Context;
-import android.content.Intent;
 
 public final class HardwareInfoService extends CarAppService {
     @NonNull
