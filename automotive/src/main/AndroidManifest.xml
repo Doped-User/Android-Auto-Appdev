@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.car.permission.CAR_INFORMATION" />
+    <uses-permission android:name="android.car.permission.READ_CAR_INFO" />
     <uses-permission android:name="androidx.car.app.ACCESS_SURFACE"/>
     <uses-permission android:name="android.car.permission.CAR_INFO"/>
     <uses-permission android:name="com.google.android.gms.permission.CAR_FUEL"/>

@@ -1,23 +1,22 @@
 package com.example.HardwareInfo;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.car.app.CarContext;
-import androidx.car.app.OnRequestPermissionsListener;
 import androidx.car.app.Screen;
 import androidx.car.app.hardware.CarHardwareManager;
 import androidx.car.app.hardware.common.CarValue;
 import androidx.car.app.hardware.common.OnCarDataAvailableListener;
 import androidx.car.app.hardware.info.CarInfo;
-import androidx.car.app.hardware.info.Speed;
 import androidx.car.app.hardware.info.EnergyLevel;
 import androidx.car.app.hardware.info.EnergyProfile;
 import androidx.car.app.hardware.info.Model;
+import androidx.car.app.hardware.info.Speed;
 import androidx.car.app.model.Action;
 import androidx.car.app.model.Pane;
 import androidx.car.app.model.PaneTemplate;
@@ -27,10 +26,14 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import java.util.concurrent.Executor;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class HardwareInfoScreen extends Screen {
     private static final String TAG = "HardwareInfoScreen";
     private static final String ACTION_SEND_CAR_DATA = "com.example.HardwareInfo.SEND_CAR_DATA";
+    private static final String ACTION_REQUEST_CAR_DATA = "com.example.HardwareInfo.REQUEST_CAR_DATA";
+    private static final String PERMISSION_SPEED = "android.car.permission.CAR_SPEED";
 
     private boolean mHasModelPermission;
     private boolean mHasEnergyProfilePermission;
@@ -46,7 +49,6 @@ public final class HardwareInfoScreen extends Screen {
         synchronized (this) {
             Log.i(TAG, "Received model information: " + data);
             mModel = data;
-            broadcastCarData();
             invalidate();
         }
     };
@@ -55,7 +57,6 @@ public final class HardwareInfoScreen extends Screen {
         synchronized (this) {
             Log.i(TAG, "Received energy profile information: " + data);
             mEnergyProfile = data;
-            broadcastCarData();
             invalidate();
         }
     };
@@ -64,7 +65,6 @@ public final class HardwareInfoScreen extends Screen {
         synchronized (this) {
             Log.i(TAG, "Received speed information: " + data);
             mSpeed = data;
-            broadcastCarData();
             invalidate();
         }
     };
@@ -72,8 +72,16 @@ public final class HardwareInfoScreen extends Screen {
         synchronized (this) {
             Log.i(TAG, "Received energy level information: " + data);
             mEnergyLevel = data;
-            broadcastCarData();
             invalidate();
+        }
+    };
+
+    private final BroadcastReceiver requestCarDataReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, @NonNull Intent intent) {
+            if (ACTION_REQUEST_CAR_DATA.equals(intent.getAction())) {
+                Log.d(TAG, "Car data request received");
+                broadcastCarData();
+            }
         }
     };
 
@@ -81,16 +89,23 @@ public final class HardwareInfoScreen extends Screen {
         super(carContext);
         mCarHardwareExecutor = ContextCompat.getMainExecutor(getCarContext());
         getLifecycle().addObserver(new DefaultLifecycleObserver() {
+            @SuppressLint("UnspecifiedRegisterReceiverFlag")
             @Override
             public void onCreate(@NonNull LifecycleOwner owner) {
                 CarHardwareManager carHardwareManager = getCarContext().getCarService(CarHardwareManager.class);
                 CarInfo carInfo = carHardwareManager.getCarInfo();
                 fetchCarInfo(carInfo);
+                getCarContext().registerReceiver(requestCarDataReceiver, new IntentFilter(ACTION_REQUEST_CAR_DATA));
+            }
+
+            @Override
+            public void onDestroy(@NonNull LifecycleOwner owner) {
+                getCarContext().unregisterReceiver(requestCarDataReceiver);
             }
         });
     }
 
-    private void fetchCarInfo(CarInfo carInfo) {
+    private void fetchCarInfo(@NonNull CarInfo carInfo) {
         mModel = null;
         try {
             carInfo.fetchModel(mCarHardwareExecutor, mModelListener);
@@ -188,6 +203,7 @@ public final class HardwareInfoScreen extends Screen {
         paneBuilder.addRow(energyLevelRowBuilder.build());
     }
 
+    @NonNull
     private String getModelInfo() {
         StringBuilder info = new StringBuilder();
         assert mModel != null;
@@ -197,6 +213,7 @@ public final class HardwareInfoScreen extends Screen {
         return info.toString();
     }
 
+    @NonNull
     private String getFuelInfo() {
         StringBuilder fuelInfo = new StringBuilder(getCarContext().getString(R.string.fuel_types)).append(": ");
         if (mEnergyProfile == null) {
@@ -213,6 +230,7 @@ public final class HardwareInfoScreen extends Screen {
         return fuelInfo.toString();
     }
 
+    @NonNull
     private String getEvInfo() {
         StringBuilder evInfo = new StringBuilder(getCarContext().getString(R.string.ev_connector_types)).append(": ");
         assert mEnergyProfile != null;
@@ -227,14 +245,16 @@ public final class HardwareInfoScreen extends Screen {
         return evInfo.toString();
     }
 
+    @NonNull
     private String getSpeedInfo() {
         StringBuilder info = new StringBuilder(getCarContext().getString(R.string.speed)).append(": ");
         assert mSpeed != null;
         appendCarFloatValue(info, mSpeed.getRawSpeedMetersPerSecond(), R.string.speed_unavailable);
-        appendCarIntValue(info, mSpeed.getSpeedDisplayUnit(), R.string.model_unavailable);
+        appendCarFloatValue(info, mSpeed.getDisplaySpeedMetersPerSecond(), R.string.model_unavailable);
         return info.toString();
     }
 
+    @NonNull
     private String getFuelPercent() {
         StringBuilder info = new StringBuilder(getCarContext().getString(R.string.fuel_level)).append(": ");
         if (mEnergyLevel == null) {
@@ -244,6 +264,7 @@ public final class HardwareInfoScreen extends Screen {
         return info.toString();
     }
 
+    @NonNull
     private String getBatteryPercent() {
         StringBuilder info = new StringBuilder(getCarContext().getString(R.string.battery_level)).append(": ");
         if (mEnergyLevel == null) {
@@ -253,7 +274,7 @@ public final class HardwareInfoScreen extends Screen {
         return info.toString();
     }
 
-    private void appendCarStringValue(StringBuilder builder, CarValue<String> carValue, int unavailableResId) {
+    private void appendCarStringValue(StringBuilder builder, @NonNull CarValue<String> carValue, int unavailableResId) {
         if (carValue.getStatus() != CarValue.STATUS_SUCCESS) {
             builder.append(getCarContext().getString(unavailableResId)).append(", ");
         } else {
@@ -261,7 +282,7 @@ public final class HardwareInfoScreen extends Screen {
         }
     }
 
-    private void appendCarIntValue(StringBuilder builder, CarValue<Integer> carValue, int unavailableResId) {
+    private void appendCarIntValue(StringBuilder builder, @NonNull CarValue<Integer> carValue, int unavailableResId) {
         if (carValue.getStatus() != CarValue.STATUS_SUCCESS) {
             builder.append(getCarContext().getString(unavailableResId));
         } else {
@@ -269,7 +290,7 @@ public final class HardwareInfoScreen extends Screen {
         }
     }
 
-    private void appendCarFloatValue(StringBuilder builder, CarValue<Float> carValue, int unavailableResId) {
+    private void appendCarFloatValue(StringBuilder builder, @NonNull CarValue<Float> carValue, int unavailableResId) {
         if (carValue.getStatus() != CarValue.STATUS_SUCCESS) {
             builder.append(getCarContext().getString(unavailableResId));
         } else {

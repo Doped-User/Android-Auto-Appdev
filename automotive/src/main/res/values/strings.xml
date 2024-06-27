@@ -25,4 +25,7 @@
     <string name="allow">Allow\n</string>
     <string name="deny">Deny</string>
     <string name="car_data">Car Data</string>
+    <string name="TollCard">TollCard\n</string>
+    <string name="no_TollCard_permission">No permission to access tollcard information</string>
+    <string name="TollCard_unavailable">TollCard Unavailable</string>
 </resources>

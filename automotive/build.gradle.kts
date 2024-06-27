@@ -36,9 +36,11 @@ android {
 }
 
 dependencies {
-    implementation("androidx.car.app:app:1.4.0")
-    implementation("androidx.car.app:app-projected:1.4.0")
     implementation(libs.androidx.app)
+    implementation(libs.androidx.app.testing)
+    implementation(libs.androidx.app.projected)
+    implementation("androidx.activity:activity:1.9.0")
+    implementation("androidx.fragment:fragment:1.8.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.leanback)

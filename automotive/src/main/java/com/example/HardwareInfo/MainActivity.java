@@ -43,7 +43,10 @@ public class MainActivity extends AppCompatActivity {
         carDataTextView = findViewById(R.id.carDataTextView);
         Button btn = findViewById(R.id.btnShow);
 
-        btn.setOnClickListener(v -> Toast.makeText(MainActivity.this, "Open Your Car App to Refresh Data", Toast.LENGTH_SHORT).show());
+        btn.setOnClickListener(v -> {
+            Toast.makeText(MainActivity.this, "Requesting Car Data", Toast.LENGTH_SHORT).show();
+            requestCarData();
+        });
     }
 
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
@@ -58,5 +61,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         unregisterReceiver(carDataReceiver);
+    }
+
+    private void requestCarData() {
+        Intent intent = new Intent("com.example.HardwareInfo.REQUEST_CAR_DATA");
+        sendBroadcast(intent);
     }
 }
