@@ -3,30 +3,20 @@
     package="com.example.HardwareInfo">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.SEND_BROADCAST" />
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.car.permission.CAR_INFORMATION" />
-    <uses-permission android:name="android.car.permission.READ_CAR_INFO" />
     <uses-permission android:name="androidx.car.app.ACCESS_SURFACE"/>
-    <uses-permission android:name="android.car.permission.CAR_INFO"/>
     <uses-permission android:name="com.google.android.gms.permission.CAR_FUEL"/>
     <uses-permission android:name="com.google.android.gms.permission.CAR_SPEED"/>
     <uses-permission android:name="com.google.android.gms.permission.CAR_MILEAGE"/>
-    <uses-permission android:name="android.car.permission.CAR_SPEED"/>
-    <uses-permission android:name="android.car.permission.READ_CAR_DISPLAY_UNITS"/>
-    <uses-permission android:name="android.car.permission.CAR_ENERGY"/>
-    <uses-permission android:name="android.car.permission.CAR_ENERGY_PORTS"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <uses-feature
         android:name="android.hardware.type.automotive"
-        android:required="true"/>
+        android:required="true" />
     <uses-feature
         android:name="android.hardware.location.gps"
-        android:required="false"/>
+        android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -38,11 +28,10 @@
 
         <meta-data
             android:name="com.google.android.gms.car.application"
-            android:resource="@xml/automotive_app_desc"/>
-
+            android:resource="@xml/automotive_app_desc" />
         <meta-data
             android:name="androidx.car.app.minCarApiLevel"
-            android:value="3"/>
+            android:value="7" />
 
         <service
             android:name="com.example.HardwareInfo.HardwareInfoService"
@@ -61,16 +50,5 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-
-
-        <receiver
-            android:name="com.example.HardwareInfo.CarDataReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.example.HardwareInfo.SEND_CAR_DATA"/>
-            </intent-filter>
-        </receiver>
-
     </application>
 </manifest>

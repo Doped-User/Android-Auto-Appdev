@@ -6,17 +6,26 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.car.app.CarContext;
 import androidx.car.app.Screen;
+import androidx.car.app.annotations.ExperimentalCarApi;
 import androidx.car.app.hardware.CarHardwareManager;
 import androidx.car.app.hardware.common.CarValue;
 import androidx.car.app.hardware.common.OnCarDataAvailableListener;
+import androidx.car.app.hardware.info.Accelerometer;
+import androidx.car.app.hardware.info.CarHardwareLocation;
 import androidx.car.app.hardware.info.CarInfo;
+import androidx.car.app.hardware.info.CarSensors;
+import androidx.car.app.hardware.info.Compass;
 import androidx.car.app.hardware.info.EnergyLevel;
 import androidx.car.app.hardware.info.EnergyProfile;
+import androidx.car.app.hardware.info.Gyroscope;
+import androidx.car.app.hardware.info.Mileage;
 import androidx.car.app.hardware.info.Model;
 import androidx.car.app.hardware.info.Speed;
+import androidx.car.app.hardware.info.TollCard;
 import androidx.car.app.model.Action;
 import androidx.car.app.model.Pane;
 import androidx.car.app.model.PaneTemplate;
@@ -25,25 +34,74 @@ import androidx.car.app.model.Template;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
-import java.util.concurrent.Executor;
+
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
+@ExperimentalCarApi
 public final class HardwareInfoScreen extends Screen {
     private static final String TAG = "HardwareInfoScreen";
     private static final String ACTION_SEND_CAR_DATA = "com.example.HardwareInfo.SEND_CAR_DATA";
     private static final String ACTION_REQUEST_CAR_DATA = "com.example.HardwareInfo.REQUEST_CAR_DATA";
-    private static final String PERMISSION_SPEED = "android.car.permission.CAR_SPEED";
 
-    private boolean mHasModelPermission;
-    private boolean mHasEnergyProfilePermission;
-    private boolean mHasSpeedPermission;
-    private boolean mHasEnergyLevelPermission;
     private final Executor mCarHardwareExecutor;
     private Model mModel;
     private EnergyProfile mEnergyProfile;
     private Speed mSpeed;
     private EnergyLevel mEnergyLevel;
+    Intent sendCarDataIntent = new Intent(ACTION_SEND_CAR_DATA);
+    private TollCard mTollCard;
+    private final OnCarDataAvailableListener<TollCard> mTollListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received toll information:" + data);
+            mTollCard = data;
+            invalidate();
+        }
+    };
+    private Mileage mMileage;
+    private final OnCarDataAvailableListener<Mileage> mMileageListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received mileage: " + data);
+            mMileage = data;
+            invalidate();
+        }
+    };
+    private Accelerometer mAccelerometer;
+    private final OnCarDataAvailableListener<Accelerometer> mAccelerometerListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received accelerometer: " + data);
+            mAccelerometer = data;
+            invalidate();
+        }
+    };
+    private Gyroscope mGyroscope;
+    private final OnCarDataAvailableListener<Gyroscope> mGyroscopeListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received gyroscope: " + data);
+            mGyroscope = data;
+            invalidate();
+        }
+    };
+    private Compass mCompass;
+    private final OnCarDataAvailableListener<Compass> mCompassListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received compass: " + data);
+            mCompass = data;
+            invalidate();
+        }
+    };
+    private CarHardwareLocation mCarHardwareLocation;
+    private final OnCarDataAvailableListener<CarHardwareLocation> mCarLocationListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received car location: " + data);
+            mCarHardwareLocation = data;
+            invalidate();
+        }
+    };
+    private Runnable mRequestRenderRunnable;
+    private boolean mHasSpeedPermission;
+    private boolean mHasEnergyLevelPermission;
 
     private final OnCarDataAvailableListener<Model> mModelListener = data -> {
         synchronized (this) {
@@ -68,6 +126,7 @@ public final class HardwareInfoScreen extends Screen {
             invalidate();
         }
     };
+
     private final OnCarDataAvailableListener<EnergyLevel> mEnergyLevelListener = data -> {
         synchronized (this) {
             Log.i(TAG, "Received energy level information: " + data);
@@ -75,6 +134,12 @@ public final class HardwareInfoScreen extends Screen {
             invalidate();
         }
     };
+    private boolean mHasTollCardPermission;
+    private boolean mHasMileagePermission;
+    private boolean mHasAccelerometerPermission;
+    private boolean mHasGyroscopePermission;
+    private boolean mHasCompassPermission;
+    private boolean mHasCarHardwareLocationPermission;
 
     private final BroadcastReceiver requestCarDataReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
@@ -85,16 +150,14 @@ public final class HardwareInfoScreen extends Screen {
         }
     };
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     public HardwareInfoScreen(@NonNull CarContext carContext) {
         super(carContext);
         mCarHardwareExecutor = ContextCompat.getMainExecutor(getCarContext());
         getLifecycle().addObserver(new DefaultLifecycleObserver() {
-            @SuppressLint("UnspecifiedRegisterReceiverFlag")
             @Override
             public void onCreate(@NonNull LifecycleOwner owner) {
-                CarHardwareManager carHardwareManager = getCarContext().getCarService(CarHardwareManager.class);
-                CarInfo carInfo = carHardwareManager.getCarInfo();
-                fetchCarInfo(carInfo);
+                fetchCarInfo(mRequestRenderRunnable);
                 getCarContext().registerReceiver(requestCarDataReceiver, new IntentFilter(ACTION_REQUEST_CAR_DATA));
             }
 
@@ -105,22 +168,17 @@ public final class HardwareInfoScreen extends Screen {
         });
     }
 
-    private void fetchCarInfo(@NonNull CarInfo carInfo) {
+    private void fetchCarInfo(@NonNull Runnable onChangeListener) {
+        mRequestRenderRunnable = onChangeListener;
+        CarHardwareManager carHardwareManager = getCarContext().getCarService(CarHardwareManager.class);
+        CarInfo carInfo = carHardwareManager.getCarInfo();
+        CarSensors carSensors = carHardwareManager.getCarSensors();
+
         mModel = null;
-        try {
-            carInfo.fetchModel(mCarHardwareExecutor, mModelListener);
-            mHasModelPermission = true;
-        } catch (SecurityException e) {
-            mHasModelPermission = false;
-        }
+        carInfo.fetchModel(mCarHardwareExecutor, mModelListener);
 
         mEnergyProfile = null;
-        try {
-            carInfo.fetchEnergyProfile(mCarHardwareExecutor, mEnergyProfileListener);
-            mHasEnergyProfilePermission = true;
-        } catch (SecurityException e) {
-            mHasEnergyProfilePermission = false;
-        }
+        carInfo.fetchEnergyProfile(mCarHardwareExecutor, mEnergyProfileListener);
 
         mSpeed = null;
         try {
@@ -130,12 +188,60 @@ public final class HardwareInfoScreen extends Screen {
             mHasSpeedPermission = false;
         }
 
-        mEnergyLevel = null;
+        mEnergyProfile = null;
         try {
             carInfo.addEnergyLevelListener(mCarHardwareExecutor, mEnergyLevelListener);
             mHasEnergyLevelPermission = true;
         } catch (SecurityException e) {
             mHasEnergyLevelPermission = false;
+        }
+
+        mTollCard = null;
+        try {
+            carInfo.addTollListener(mCarHardwareExecutor, mTollListener);
+            mHasTollCardPermission = true;
+        } catch (SecurityException e) {
+            mHasTollCardPermission = false;
+        }
+
+        mMileage = null;
+        try {
+            carInfo.addMileageListener(mCarHardwareExecutor, mMileageListener);
+            mHasMileagePermission = true;
+        } catch (SecurityException e) {
+            mHasMileagePermission = false;
+        }
+
+        mCompass = null;
+        try {
+            carSensors.addCompassListener(CarSensors.UPDATE_RATE_NORMAL, mCarHardwareExecutor, mCompassListener);
+            mHasCompassPermission = true;
+        } catch (SecurityException e) {
+            mHasCompassPermission = false;
+        }
+
+        mGyroscope = null;
+        try {
+            carSensors.addGyroscopeListener(CarSensors.UPDATE_RATE_NORMAL, mCarHardwareExecutor, mGyroscopeListener);
+            mHasGyroscopePermission = true;
+        } catch (SecurityException e) {
+            mHasGyroscopePermission = false;
+        }
+
+        mAccelerometer = null;
+        try {
+            carSensors.addAccelerometerListener(CarSensors.UPDATE_RATE_NORMAL, mCarHardwareExecutor, mAccelerometerListener);
+            mHasAccelerometerPermission = true;
+        } catch (SecurityException e) {
+            mHasAccelerometerPermission = false;
+        }
+
+        mCarHardwareLocation = null;
+        try {
+            carSensors.addCarHardwareLocationListener(CarSensors.UPDATE_RATE_NORMAL, mCarHardwareExecutor, mCarLocationListener);
+            mHasCarHardwareLocationPermission = true;
+        } catch (SecurityException e) {
+            mHasCarHardwareLocationPermission = false;
         }
     }
 
@@ -143,70 +249,98 @@ public final class HardwareInfoScreen extends Screen {
     @Override
     public Template onGetTemplate() {
         Pane.Builder paneBuilder = new Pane.Builder();
+
         if (allInfoAvailable()) {
             addModelRow(paneBuilder);
             addEnergyProfileRow(paneBuilder);
             addSpeedRow(paneBuilder);
             addEnergyLevelRow(paneBuilder);
+            addTollCardRow(paneBuilder);
+            addMileageRow(paneBuilder);
+            addAccelerometerRow(paneBuilder);
+            addGyroscopeRow(paneBuilder);
+            addCompassRow(paneBuilder);
+            addCarLocationRow(paneBuilder);
         } else {
             paneBuilder.setLoading(true);
         }
+
+        paneBuilder.addAction(new Action.Builder()
+                .setTitle(getCarContext().getString(R.string.request_permissions_title))
+                .setOnClickListener(() -> getScreenManager().push(new RequestPermissionScreen(getCarContext())))
+                .build());
+
         return new PaneTemplate.Builder(paneBuilder.build())
+                .setTitle("Car Information")
                 .setHeaderAction(Action.BACK)
-                .setTitle(getCarContext().getString(R.string.car_hardware_info))
                 .build();
     }
 
     private void addModelRow(Pane.Builder paneBuilder) {
-        Row.Builder modelRowBuilder = new Row.Builder()
-                .setTitle(getCarContext().getString(R.string.model_info));
-        if (!mHasModelPermission) {
-            modelRowBuilder.addText(getCarContext().getString(R.string.no_model_permission));
-        } else {
-            modelRowBuilder.addText(getModelInfo());
-        }
+        Row.Builder modelRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.model_info));
+        modelRowBuilder.addText(getModelInfo());
         paneBuilder.addRow(modelRowBuilder.build());
     }
 
     private void addEnergyProfileRow(Pane.Builder paneBuilder) {
-        Row.Builder energyProfileRowBuilder = new Row.Builder()
-                .setTitle(getCarContext().getString(R.string.energy_profile));
-        if (!mHasEnergyProfilePermission) {
-            energyProfileRowBuilder.addText(getCarContext().getString(R.string.no_energy_profile_permission));
-        } else {
-            energyProfileRowBuilder.addText(getFuelInfo());
-            energyProfileRowBuilder.addText(getEvInfo());
-        }
+        Row.Builder energyProfileRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.energy_profile));
+        energyProfileRowBuilder.addText(getFuelInfo());
+        energyProfileRowBuilder.addText(getEvInfo());
         paneBuilder.addRow(energyProfileRowBuilder.build());
     }
 
     private void addSpeedRow(Pane.Builder paneBuilder) {
-        Row.Builder speedRowBuilder = new Row.Builder()
-                .setTitle(getCarContext().getString(R.string.speed));
-        if (!mHasSpeedPermission) {
-            speedRowBuilder.addText(getCarContext().getString(R.string.no_speed_permission));
-        } else {
-            speedRowBuilder.addText(getSpeedInfo());
-        }
+        Row.Builder speedRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.speed));
+        speedRowBuilder.addText(getSpeedInfo());
         paneBuilder.addRow(speedRowBuilder.build());
     }
 
     private void addEnergyLevelRow(Pane.Builder paneBuilder) {
-        Row.Builder energyLevelRowBuilder = new Row.Builder()
-                .setTitle(getCarContext().getString(R.string.energy_level));
-        if (!mHasEnergyLevelPermission) {
-            energyLevelRowBuilder.addText(getCarContext().getString(R.string.no_energy_level_permission));
-        } else {
-            energyLevelRowBuilder.addText(getFuelPercent());
-            energyLevelRowBuilder.addText(getBatteryPercent());
-        }
+        Row.Builder energyLevelRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.energy_level));
+        energyLevelRowBuilder.addText(getFuelPercent());
+        energyLevelRowBuilder.addText(getEnergyIsLow());
         paneBuilder.addRow(energyLevelRowBuilder.build());
+    }
+
+    private void addTollCardRow(Pane.Builder paneBuilder) {
+        Row.Builder tollCardRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.toll_card));
+        tollCardRowBuilder.addText(getTollCardInfo());
+        paneBuilder.addRow(tollCardRowBuilder.build());
+    }
+
+    private void addMileageRow(Pane.Builder paneBuilder) {
+        Row.Builder mileageRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.mileage));
+        mileageRowBuilder.addText(getMileageInfo());
+        paneBuilder.addRow(mileageRowBuilder.build());
+    }
+
+    private void addAccelerometerRow(Pane.Builder paneBuilder) {
+        Row.Builder accelerometerRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.accelerometer));
+        accelerometerRowBuilder.addText(getAccelerometerInfo());
+        paneBuilder.addRow(accelerometerRowBuilder.build());
+    }
+
+    private void addGyroscopeRow(Pane.Builder paneBuilder) {
+        Row.Builder gyroscopeRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.gyroscope));
+        gyroscopeRowBuilder.addText(getGyroscopeInfo());
+        paneBuilder.addRow(gyroscopeRowBuilder.build());
+    }
+
+    private void addCompassRow(Pane.Builder paneBuilder) {
+        Row.Builder compassRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.compass));
+        compassRowBuilder.addText(getCompassInfo());
+        paneBuilder.addRow(compassRowBuilder.build());
+    }
+
+    private void addCarLocationRow(Pane.Builder paneBuilder) {
+        Row.Builder carLocationRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.car_location));
+        carLocationRowBuilder.addText(getCarLocationInfo());
+        paneBuilder.addRow(carLocationRowBuilder.build());
     }
 
     @NonNull
     private String getModelInfo() {
         StringBuilder info = new StringBuilder();
-        assert mModel != null;
         appendCarStringValue(info, mModel.getManufacturer(), R.string.manufacturer_unavailable);
         appendCarStringValue(info, mModel.getName(), R.string.model_unavailable);
         appendCarIntValue(info, mModel.getYear(), R.string.year_unavailable);
@@ -216,16 +350,9 @@ public final class HardwareInfoScreen extends Screen {
     @NonNull
     private String getFuelInfo() {
         StringBuilder fuelInfo = new StringBuilder(getCarContext().getString(R.string.fuel_types)).append(": ");
-        if (mEnergyProfile == null) {
-            throw new AssertionError();
-        }
-        if (mEnergyProfile.getFuelTypes().getStatus() != CarValue.STATUS_SUCCESS) {
-            fuelInfo.append(getCarContext().getString(R.string.unavailable));
-        } else {
-            assert mEnergyProfile.getFuelTypes().getValue() != null;
-            for (int fuelType : mEnergyProfile.getFuelTypes().getValue()) {
-                fuelInfo.append(HardwareInfoScreen.FuelTypeUtil.fuelTypeAsString(fuelType)).append(" ");
-            }
+        assert mEnergyProfile.getFuelTypes().getValue() != null;
+        for (int fuelType : mEnergyProfile.getFuelTypes().getValue()) {
+            fuelInfo.append(FuelTypeUtil.fuelTypeAsString(fuelType)).append(" ");
         }
         return fuelInfo.toString();
     }
@@ -233,14 +360,9 @@ public final class HardwareInfoScreen extends Screen {
     @NonNull
     private String getEvInfo() {
         StringBuilder evInfo = new StringBuilder(getCarContext().getString(R.string.ev_connector_types)).append(": ");
-        assert mEnergyProfile != null;
-        if (mEnergyProfile.getEvConnectorTypes().getStatus() != CarValue.STATUS_SUCCESS) {
-            evInfo.append(getCarContext().getString(R.string.unavailable));
-        } else {
-            assert mEnergyProfile.getEvConnectorTypes().getValue() != null;
-            for (int connectorType : mEnergyProfile.getEvConnectorTypes().getValue()) {
-                evInfo.append(HardwareInfoScreen.ConnectorUtil.evConnectorAsString(connectorType)).append(" ");
-            }
+        assert mEnergyProfile.getEvConnectorTypes().getValue() != null;
+        for (int connectorType : mEnergyProfile.getEvConnectorTypes().getValue()) {
+            evInfo.append(HardwareInfoScreen.ConnectorUtil.evConnectorAsString(connectorType)).append(" ");
         }
         return evInfo.toString();
     }
@@ -248,84 +370,152 @@ public final class HardwareInfoScreen extends Screen {
     @NonNull
     private String getSpeedInfo() {
         StringBuilder info = new StringBuilder(getCarContext().getString(R.string.speed)).append(": ");
-        assert mSpeed != null;
-        appendCarFloatValue(info, mSpeed.getRawSpeedMetersPerSecond(), R.string.speed_unavailable);
-        appendCarFloatValue(info, mSpeed.getDisplaySpeedMetersPerSecond(), R.string.model_unavailable);
+        if (mSpeed != null) {
+            appendCarFloatValue(info, mSpeed.getDisplaySpeedMetersPerSecond(), R.string.speed_unavailable);
+        } else {
+            info.append(getCarContext().getString(R.string.speed_unavailable));
+        }
         return info.toString();
     }
 
     @NonNull
     private String getFuelPercent() {
         StringBuilder info = new StringBuilder(getCarContext().getString(R.string.fuel_level)).append(": ");
-        if (mEnergyLevel == null) {
-            throw new AssertionError();
+        if (mEnergyLevel != null) {
+            appendCarFloatValue(info, mEnergyLevel.getFuelPercent(), R.string.fuel_level_unavailable);
+        } else {
+            info.append(getCarContext().getString(R.string.fuel_level_unavailable));
         }
-        appendCarFloatValue(info, mEnergyLevel.getFuelPercent(), R.string.fuel_level_unavailable);
         return info.toString();
     }
 
     @NonNull
-    private String getBatteryPercent() {
-        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.battery_level)).append(": ");
-        if (mEnergyLevel == null) {
-            throw new AssertionError();
+    private String getEnergyIsLow() {
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.fuel_low)).append(": ");
+        if (mEnergyLevel != null) {
+            appendCarBoolValue(info, mEnergyLevel.getEnergyIsLow(), R.string.fuel_level_unavailable);
+        } else {
+            info.append(getCarContext().getString(R.string.fuel_level_unavailable));
         }
-        appendCarFloatValue(info, mEnergyLevel.getBatteryPercent(), R.string.battery_level_unavailable);
         return info.toString();
     }
 
-    private void appendCarStringValue(StringBuilder builder, @NonNull CarValue<String> carValue, int unavailableResId) {
-        if (carValue.getStatus() != CarValue.STATUS_SUCCESS) {
-            builder.append(getCarContext().getString(unavailableResId)).append(", ");
+    @NonNull
+    private String getTollCardInfo() {
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.toll_card_info)).append(": ");
+        if (mTollCard != null) {
+            appendCarIntValue(info, mTollCard.getCardState(), R.string.toll_card_unavailable);
         } else {
-            builder.append(carValue.getValue()).append(", ");
+            info.append(getCarContext().getString(R.string.toll_card_unavailable));
         }
+        return info.toString();
     }
 
-    private void appendCarIntValue(StringBuilder builder, @NonNull CarValue<Integer> carValue, int unavailableResId) {
-        if (carValue.getStatus() != CarValue.STATUS_SUCCESS) {
-            builder.append(getCarContext().getString(unavailableResId));
+    @NonNull
+    private String getMileageInfo() {
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.mileage_info)).append(": ");
+        if (mMileage != null) {
+            appendCarFloatValue(info, mMileage.getOdometerMeters(), R.string.mileage_unavailable);
         } else {
-            builder.append(carValue.getValue());
+            info.append(getCarContext().getString(R.string.mileage_unavailable));
         }
+        return info.toString();
     }
 
-    private void appendCarFloatValue(StringBuilder builder, @NonNull CarValue<Float> carValue, int unavailableResId) {
-        if (carValue.getStatus() != CarValue.STATUS_SUCCESS) {
-            builder.append(getCarContext().getString(unavailableResId));
+    @NonNull
+    private String getAccelerometerInfo() {
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.accelerometer_info)).append(": ");
+        if (mAccelerometer != null) {
+            info.append("\n\tX: ").append(mAccelerometer.getForces().getValue().get(0));
+            info.append("\n\tY: ").append(mAccelerometer.getForces().getValue().get(1));
+            info.append("\n\tZ: ").append(mAccelerometer.getForces().getValue().get(2));
         } else {
-            builder.append(carValue.getValue());
+            info.append(getCarContext().getString(R.string.accelerometer_unavailable));
         }
+        return info.toString();
+    }
+
+    @NonNull
+    private String getGyroscopeInfo() {
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.gyroscope_info)).append(": ");
+        if (mGyroscope != null) {
+            info.append("\n\tX: ").append(mGyroscope.getRotations().getValue().get(0));
+            info.append("\n\tY: ").append(mGyroscope.getRotations().getValue().get(1));
+            info.append("\n\tZ: ").append(mGyroscope.getRotations().getValue().get(2));
+        } else {
+            info.append(getCarContext().getString(R.string.gyroscope_unavailable));
+        }
+        return info.toString();
+    }
+
+    @NonNull
+    private String getCompassInfo() {
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.compass_info)).append(": ");
+        if (mCompass != null) {
+            info.append("\n\tBearing: ").append(mCompass.getOrientations().getValue().get(0));
+            info.append("\n\tPitch: ").append(mCompass.getOrientations().getValue().get(1));
+            info.append("\n\tRoll: ").append(mCompass.getOrientations().getValue().get(2));
+        } else {
+            info.append(getCarContext().getString(R.string.compass_unavailable));
+        }
+        return info.toString();
+    }
+
+    @NonNull
+    private String getCarLocationInfo() {
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.car_location_info)).append(": ");
+        if (mCarHardwareLocation != null) {
+            info.append("\n\tLatitude: ").append(mCarHardwareLocation.getLocation().getValue().getLatitude());
+            info.append("\n\tLongitude: ").append(mCarHardwareLocation.getLocation().getValue().getLongitude());
+        } else {
+            info.append(getCarContext().getString(R.string.car_location_unavailable));
+        }
+        return info.toString();
+    }
+
+    private void appendCarStringValue(@NonNull StringBuilder builder, @NonNull CarValue<String> carValue, int unavailableResId) {
+        builder.append(carValue.getStatus() == CarValue.STATUS_SUCCESS ? carValue.getValue() : getCarContext().getString(unavailableResId)).append(", ");
+    }
+
+    private void appendCarIntValue(@NonNull StringBuilder builder, @NonNull CarValue<Integer> carValue, int unavailableResId) {
+        builder.append(carValue.getStatus() == CarValue.STATUS_SUCCESS ? carValue.getValue() : getCarContext().getString(unavailableResId));
+    }
+
+    @SuppressLint("DefaultLocale")
+    private void appendCarFloatValue(@NonNull StringBuilder builder, @NonNull CarValue<Float> carValue, int unavailableResId) {
+        builder.append(carValue.getStatus() == CarValue.STATUS_SUCCESS ? String.format("%.2f", carValue.getValue()) : getCarContext().getString(unavailableResId));
+    }
+
+    private void appendCarBoolValue(@NonNull StringBuilder builder, @NonNull CarValue<Boolean> carValue, int unavailableResId) {
+        builder.append(carValue.getStatus() == CarValue.STATUS_SUCCESS ? carValue.getValue() : getCarContext().getString(unavailableResId));
     }
 
     private boolean allInfoAvailable() {
-        return (!mHasModelPermission || mModel != null) &&
-                (!mHasSpeedPermission || mSpeed != null) &&
-                (!mHasEnergyProfilePermission || mEnergyProfile != null) &&
-                (!mHasEnergyLevelPermission || mEnergyLevel != null);
+        return mModel != null
+                && mEnergyProfile != null
+                && (mSpeed != null || !mHasSpeedPermission)
+                && (mEnergyLevel != null || !mHasEnergyLevelPermission)
+                && (mTollCard != null || !mHasTollCardPermission)
+                && (mMileage != null || !mHasMileagePermission)
+                && (mAccelerometer != null || !mHasAccelerometerPermission)
+                && (mGyroscope != null || !mHasGyroscopePermission)
+                && (mCompass != null || !mHasCompassPermission)
+                && (mCarHardwareLocation != null || !mHasCarHardwareLocationPermission);
     }
 
     private void broadcastCarData() {
         if (allInfoAvailable()) {
-            StringBuilder carDataBuilder = new StringBuilder();
-            if (mModel != null) {
-                carDataBuilder.append("Model: ").append(getModelInfo()).append("\n");
-            }
-            if (mEnergyProfile != null) {
-                carDataBuilder.append("Energy Profile: ").append(getFuelInfo()).append("\n");
-                carDataBuilder.append(getEvInfo()).append("\n");
-            }
-            if (mSpeed != null) {
-                carDataBuilder.append("Speed: ").append(getSpeedInfo()).append("\n");
-            }
-            if (mEnergyLevel != null) {
-                carDataBuilder.append("Energy Level: ").append(getFuelInfo()).append("\n");
-                carDataBuilder.append(getFuelPercent()).append("\n");
-            }
-            String carData = carDataBuilder.toString();
-            Intent intent = new Intent(ACTION_SEND_CAR_DATA);
-            intent.putExtra("car_data", carData);
-            getCarContext().sendBroadcast(intent);
+            sendCarDataIntent.putExtra("MODEL_INFO", "\n\t" + getModelInfo());
+            sendCarDataIntent.putExtra("ENERGY_PROFILE_INFO", "\n\t" + getFuelInfo() + "\n\t" + getEvInfo());
+            sendCarDataIntent.putExtra("SPEED_INFO", "\n\t" + getSpeedInfo());
+            sendCarDataIntent.putExtra("ENERGY_LEVEL_INFO", "\n\t" + getFuelPercent() + "\n\t" + getEnergyIsLow());
+            sendCarDataIntent.putExtra("TOLL_CARD_INFO", "\n\t" + getTollCardInfo());
+            sendCarDataIntent.putExtra("MILEAGE_INFO", "\n\t" + getMileageInfo());
+            sendCarDataIntent.putExtra("ACCELEROMETER_INFO", "\n\t" + getAccelerometerInfo());
+            sendCarDataIntent.putExtra("GYROSCOPE_INFO", "\n\t" + getGyroscopeInfo());
+            sendCarDataIntent.putExtra("COMPASS_INFO", "\n\t" + getCompassInfo());
+            sendCarDataIntent.putExtra("CAR_LOCATION_INFO", "\n\t" + getCarLocationInfo());
+            getCarContext().sendBroadcast(sendCarDataIntent);
         }
     }
 
@@ -333,17 +523,17 @@ public final class HardwareInfoScreen extends Screen {
         private static final Map<Integer, String> evConnectorTypeMap = new HashMap<>();
         static {
             evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_J1772, "J1772");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_MENNEKES, "MENNEKES");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_CHADEMO, "CHADEMO");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_COMBO_1, "COMBO_1");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_COMBO_2, "COMBO_2");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_TESLA_ROADSTER, "TESLA_ROADSTER");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_TESLA_HPWC, "TESLA_HPWC");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_TESLA_SUPERCHARGER, "TESLA_SUPERCHARGER");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_GBT, "GBT");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_GBT_DC, "GBT_DC");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_MENNEKES, "Mennekes");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_CHADEMO, "CHAdeMO");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_COMBO_1, "CCS Combo-1");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_COMBO_2, "CCS Combo-2");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_TESLA_ROADSTER, "Tesla-Roadster");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_TESLA_HPWC, "Tesla-HPWC");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_TESLA_SUPERCHARGER, "Tesla-Supercharger");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_GBT, "GB/T-AC");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_GBT_DC, "GB/T-DC");
             evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_SCAME, "SCAME");
-            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_OTHER, "OTHER");
+            evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_OTHER, "Other");
             evConnectorTypeMap.put(EnergyProfile.EVCONNECTOR_TYPE_UNKNOWN, "UNKNOWN");
         }
         static String evConnectorAsString(int evConnectorType) {
@@ -354,22 +544,22 @@ public final class HardwareInfoScreen extends Screen {
     static class FuelTypeUtil {
         private static final Map<Integer, String> fuelTypeMap = new HashMap<>();
         static {
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_UNLEADED, "UNLEADED");
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_LEADED, "LEADED");
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_DIESEL_1, "DIESEL_1");
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_DIESEL_2, "DIESEL_2");
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_BIODIESEL, "BIODIESEL");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_UNLEADED, "Unleaded");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_LEADED, "Leaded");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_DIESEL_1, "Diesel-1");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_DIESEL_2, "Diesel-2");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_BIODIESEL, "Biodiesel");
             fuelTypeMap.put(EnergyProfile.FUEL_TYPE_E85, "E85");
             fuelTypeMap.put(EnergyProfile.FUEL_TYPE_LPG, "LPG");
             fuelTypeMap.put(EnergyProfile.FUEL_TYPE_CNG, "CNG");
             fuelTypeMap.put(EnergyProfile.FUEL_TYPE_LNG, "LNG");
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_ELECTRIC, "ELECTRIC");
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_HYDROGEN, "HYDROGEN");
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_OTHER, "OTHER");
-            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_UNKNOWN, "UNKNOWN");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_ELECTRIC, "Electric");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_HYDROGEN, "Hydrogen");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_OTHER, "Other");
+            fuelTypeMap.put(EnergyProfile.FUEL_TYPE_UNKNOWN, "Unknown");
         }
         static String fuelTypeAsString(int fuelType) {
-            return fuelTypeMap.getOrDefault(fuelType, "UNKNOWN");
+            return fuelTypeMap.getOrDefault(fuelType, "Unknown");
         }
     }
 }

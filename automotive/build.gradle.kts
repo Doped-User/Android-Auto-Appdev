@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.androidx.app.projected)
     implementation("androidx.activity:activity:1.9.0")
     implementation("androidx.fragment:fragment:1.8.1")
+    implementation("androidx.annotation:annotation-experimental:1.4.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.leanback)
