@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
-
 import androidx.annotation.NonNull;
 import androidx.car.app.CarContext;
 import androidx.car.app.Screen;
@@ -36,6 +35,7 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -46,62 +46,32 @@ public final class HardwareInfoScreen extends Screen {
     private static final String ACTION_REQUEST_CAR_DATA = "com.example.HardwareInfo.REQUEST_CAR_DATA";
 
     private final Executor mCarHardwareExecutor;
+
     private Model mModel;
     private EnergyProfile mEnergyProfile;
     private Speed mSpeed;
     private EnergyLevel mEnergyLevel;
-    Intent sendCarDataIntent = new Intent(ACTION_SEND_CAR_DATA);
     private TollCard mTollCard;
-    private final OnCarDataAvailableListener<TollCard> mTollListener = data -> {
-        synchronized (this) {
-            Log.i(TAG, "Received toll information:" + data);
-            mTollCard = data;
-            invalidate();
-        }
-    };
     private Mileage mMileage;
-    private final OnCarDataAvailableListener<Mileage> mMileageListener = data -> {
-        synchronized (this) {
-            Log.i(TAG, "Received mileage: " + data);
-            mMileage = data;
-            invalidate();
-        }
-    };
     private Accelerometer mAccelerometer;
-    private final OnCarDataAvailableListener<Accelerometer> mAccelerometerListener = data -> {
-        synchronized (this) {
-            Log.i(TAG, "Received accelerometer: " + data);
-            mAccelerometer = data;
-            invalidate();
-        }
-    };
     private Gyroscope mGyroscope;
-    private final OnCarDataAvailableListener<Gyroscope> mGyroscopeListener = data -> {
-        synchronized (this) {
-            Log.i(TAG, "Received gyroscope: " + data);
-            mGyroscope = data;
-            invalidate();
-        }
-    };
     private Compass mCompass;
-    private final OnCarDataAvailableListener<Compass> mCompassListener = data -> {
-        synchronized (this) {
-            Log.i(TAG, "Received compass: " + data);
-            mCompass = data;
-            invalidate();
-        }
-    };
     private CarHardwareLocation mCarHardwareLocation;
-    private final OnCarDataAvailableListener<CarHardwareLocation> mCarLocationListener = data -> {
-        synchronized (this) {
-            Log.i(TAG, "Received car location: " + data);
-            mCarHardwareLocation = data;
-            invalidate();
-        }
-    };
+
     private Runnable mRequestRenderRunnable;
+
     private boolean mHasSpeedPermission;
     private boolean mHasEnergyLevelPermission;
+    private boolean mHasTollCardPermission;
+    private boolean mHasMileagePermission;
+    private boolean mHasAccelerometerPermission;
+    private boolean mHasGyroscopePermission;
+    private boolean mHasCompassPermission;
+    private boolean mHasCarHardwareLocationPermission;
+
+    private boolean sensorsEnabled = true;
+
+    Intent sendCarDataIntent = new Intent(ACTION_SEND_CAR_DATA);
 
     private final OnCarDataAvailableListener<Model> mModelListener = data -> {
         synchronized (this) {
@@ -134,12 +104,54 @@ public final class HardwareInfoScreen extends Screen {
             invalidate();
         }
     };
-    private boolean mHasTollCardPermission;
-    private boolean mHasMileagePermission;
-    private boolean mHasAccelerometerPermission;
-    private boolean mHasGyroscopePermission;
-    private boolean mHasCompassPermission;
-    private boolean mHasCarHardwareLocationPermission;
+
+    private final OnCarDataAvailableListener<TollCard> mTollListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received toll information:" + data);
+            mTollCard = data;
+            invalidate();
+        }
+    };
+
+    private final OnCarDataAvailableListener<Mileage> mMileageListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received mileage: " + data);
+            mMileage = data;
+            invalidate();
+        }
+    };
+
+    private final OnCarDataAvailableListener<Accelerometer> mAccelerometerListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received accelerometer: " + data);
+            mAccelerometer = data;
+            invalidate();
+        }
+    };
+
+    private final OnCarDataAvailableListener<Gyroscope> mGyroscopeListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received gyroscope: " + data);
+            mGyroscope = data;
+            invalidate();
+        }
+    };
+
+    private final OnCarDataAvailableListener<Compass> mCompassListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received compass: " + data);
+            mCompass = data;
+            invalidate();
+        }
+    };
+
+    private final OnCarDataAvailableListener<CarHardwareLocation> mCarLocationListener = data -> {
+        synchronized (this) {
+            Log.i(TAG, "Received car location: " + data);
+            mCarHardwareLocation = data;
+            invalidate();
+        }
+    };
 
     private final BroadcastReceiver requestCarDataReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
@@ -188,7 +200,7 @@ public final class HardwareInfoScreen extends Screen {
             mHasSpeedPermission = false;
         }
 
-        mEnergyProfile = null;
+        mEnergyLevel = null;
         try {
             carInfo.addEnergyLevelListener(mCarHardwareExecutor, mEnergyLevelListener);
             mHasEnergyLevelPermission = true;
@@ -245,6 +257,44 @@ public final class HardwareInfoScreen extends Screen {
         }
     }
 
+    private void removeCarInfoListeners() {
+        CarHardwareManager carHardwareManager = getCarContext().getCarService(CarHardwareManager.class);
+        CarInfo carInfo = carHardwareManager.getCarInfo();
+        CarSensors carSensors = carHardwareManager.getCarSensors();
+
+        if (mHasSpeedPermission) {
+            carInfo.removeSpeedListener(mSpeedListener);
+        }
+
+        if (mHasEnergyLevelPermission) {
+            carInfo.removeEnergyLevelListener(mEnergyLevelListener);
+        }
+
+        if (mHasTollCardPermission) {
+            carInfo.removeTollListener(mTollListener);
+        }
+
+        if (mHasMileagePermission) {
+            carInfo.removeMileageListener(mMileageListener);
+        }
+
+        if (mHasCompassPermission) {
+            carSensors.removeCompassListener(mCompassListener);
+        }
+
+        if (mHasGyroscopePermission) {
+            carSensors.removeGyroscopeListener(mGyroscopeListener);
+        }
+
+        if (mHasAccelerometerPermission) {
+            carSensors.removeAccelerometerListener(mAccelerometerListener);
+        }
+
+        if (mHasCarHardwareLocationPermission) {
+            carSensors.removeCarHardwareLocationListener(mCarLocationListener);
+        }
+    }
+
     @NonNull
     @Override
     public Template onGetTemplate() {
@@ -262,12 +312,25 @@ public final class HardwareInfoScreen extends Screen {
             addCompassRow(paneBuilder);
             addCarLocationRow(paneBuilder);
         } else {
-            paneBuilder.setLoading(true);
+            paneBuilder.addRow(new Row.Builder().setTitle("Gathering car information...").build());
         }
 
         paneBuilder.addAction(new Action.Builder()
                 .setTitle(getCarContext().getString(R.string.request_permissions_title))
                 .setOnClickListener(() -> getScreenManager().push(new RequestPermissionScreen(getCarContext())))
+                .build());
+
+        paneBuilder.addAction(new Action.Builder()
+                .setTitle(sensorsEnabled ? getCarContext().getString(R.string.disable_sensors_title) : getCarContext().getString(R.string.fetch_sensors_title))
+                .setOnClickListener(() -> {
+                    if (sensorsEnabled) {
+                        disableSensors();
+                    } else {
+                        fetchSensors();
+                    }
+                    sensorsEnabled = !sensorsEnabled;
+                    invalidate();
+                })
                 .build());
 
         return new PaneTemplate.Builder(paneBuilder.build())
@@ -276,63 +339,72 @@ public final class HardwareInfoScreen extends Screen {
                 .build();
     }
 
-    private void addModelRow(Pane.Builder paneBuilder) {
+    private void fetchSensors() {
+        fetchCarInfo(mRequestRenderRunnable);
+    }
+
+    private void disableSensors() {
+        removeCarInfoListeners();
+    }
+
+    //CAR UI (SHOULD BE REMOVED)
+    private void addModelRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder modelRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.model_info));
         modelRowBuilder.addText(getModelInfo());
         paneBuilder.addRow(modelRowBuilder.build());
     }
 
-    private void addEnergyProfileRow(Pane.Builder paneBuilder) {
+    private void addEnergyProfileRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder energyProfileRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.energy_profile));
         energyProfileRowBuilder.addText(getFuelInfo());
         energyProfileRowBuilder.addText(getEvInfo());
         paneBuilder.addRow(energyProfileRowBuilder.build());
     }
 
-    private void addSpeedRow(Pane.Builder paneBuilder) {
+    private void addSpeedRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder speedRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.speed));
         speedRowBuilder.addText(getSpeedInfo());
         paneBuilder.addRow(speedRowBuilder.build());
     }
 
-    private void addEnergyLevelRow(Pane.Builder paneBuilder) {
+    private void addEnergyLevelRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder energyLevelRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.energy_level));
         energyLevelRowBuilder.addText(getFuelPercent());
         energyLevelRowBuilder.addText(getEnergyIsLow());
         paneBuilder.addRow(energyLevelRowBuilder.build());
     }
 
-    private void addTollCardRow(Pane.Builder paneBuilder) {
+    private void addTollCardRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder tollCardRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.toll_card));
         tollCardRowBuilder.addText(getTollCardInfo());
         paneBuilder.addRow(tollCardRowBuilder.build());
     }
 
-    private void addMileageRow(Pane.Builder paneBuilder) {
+    private void addMileageRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder mileageRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.mileage));
         mileageRowBuilder.addText(getMileageInfo());
         paneBuilder.addRow(mileageRowBuilder.build());
     }
 
-    private void addAccelerometerRow(Pane.Builder paneBuilder) {
+    private void addAccelerometerRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder accelerometerRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.accelerometer));
         accelerometerRowBuilder.addText(getAccelerometerInfo());
         paneBuilder.addRow(accelerometerRowBuilder.build());
     }
 
-    private void addGyroscopeRow(Pane.Builder paneBuilder) {
+    private void addGyroscopeRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder gyroscopeRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.gyroscope));
         gyroscopeRowBuilder.addText(getGyroscopeInfo());
         paneBuilder.addRow(gyroscopeRowBuilder.build());
     }
 
-    private void addCompassRow(Pane.Builder paneBuilder) {
+    private void addCompassRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder compassRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.compass));
         compassRowBuilder.addText(getCompassInfo());
         paneBuilder.addRow(compassRowBuilder.build());
     }
 
-    private void addCarLocationRow(Pane.Builder paneBuilder) {
+    private void addCarLocationRow(@NonNull Pane.Builder paneBuilder) {
         Row.Builder carLocationRowBuilder = new Row.Builder().setTitle(getCarContext().getString(R.string.car_location));
         carLocationRowBuilder.addText(getCarLocationInfo());
         paneBuilder.addRow(carLocationRowBuilder.build());
@@ -424,11 +496,9 @@ public final class HardwareInfoScreen extends Screen {
 
     @NonNull
     private String getAccelerometerInfo() {
-        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.accelerometer_info)).append(": ");
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.accelerometer_info)).append("\n[X] [Y] [Z]: ");
         if (mAccelerometer != null) {
-            info.append("\n\tX: ").append(mAccelerometer.getForces().getValue().get(0));
-            info.append("\n\tY: ").append(mAccelerometer.getForces().getValue().get(1));
-            info.append("\n\tZ: ").append(mAccelerometer.getForces().getValue().get(2));
+            appendCarListValue(info, mAccelerometer.getForces(), R.string.accelerometer_unavailable);
         } else {
             info.append(getCarContext().getString(R.string.accelerometer_unavailable));
         }
@@ -437,11 +507,9 @@ public final class HardwareInfoScreen extends Screen {
 
     @NonNull
     private String getGyroscopeInfo() {
-        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.gyroscope_info)).append(": ");
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.gyroscope_info)).append("\n[X] [Y] [Z]: ");
         if (mGyroscope != null) {
-            info.append("\n\tX: ").append(mGyroscope.getRotations().getValue().get(0));
-            info.append("\n\tY: ").append(mGyroscope.getRotations().getValue().get(1));
-            info.append("\n\tZ: ").append(mGyroscope.getRotations().getValue().get(2));
+            appendCarListValue(info, mGyroscope.getRotations(), R.string.gyroscope_unavailable);
         } else {
             info.append(getCarContext().getString(R.string.gyroscope_unavailable));
         }
@@ -450,11 +518,9 @@ public final class HardwareInfoScreen extends Screen {
 
     @NonNull
     private String getCompassInfo() {
-        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.compass_info)).append(": ");
+        StringBuilder info = new StringBuilder(getCarContext().getString(R.string.compass_info)).append("\n[Bearing] [Pitch] [Roll]: ");
         if (mCompass != null) {
-            info.append("\n\tBearing: ").append(mCompass.getOrientations().getValue().get(0));
-            info.append("\n\tPitch: ").append(mCompass.getOrientations().getValue().get(1));
-            info.append("\n\tRoll: ").append(mCompass.getOrientations().getValue().get(2));
+            appendCarListValue(info, mCompass.getOrientations(), R.string.compass_unavailable);
         } else {
             info.append(getCarContext().getString(R.string.compass_unavailable));
         }
@@ -490,6 +556,21 @@ public final class HardwareInfoScreen extends Screen {
         builder.append(carValue.getStatus() == CarValue.STATUS_SUCCESS ? carValue.getValue() : getCarContext().getString(unavailableResId));
     }
 
+    @SuppressLint("DefaultLocale")
+    private void appendCarListValue(@NonNull StringBuilder builder, @NonNull CarValue<List<Float>> carValue, int unavailableResId) {
+        if (carValue.getStatus() == CarValue.STATUS_SUCCESS && carValue.getValue() != null) {
+            List<Float> values = carValue.getValue();
+            for (int i = 0; i < values.size(); i++) {
+                builder.append(String.format("%.2f", values.get(i)));
+                if (i < values.size() - 1) {
+                    builder.append(", ");
+                }
+            }
+        } else {
+            builder.append(getCarContext().getString(unavailableResId));
+        }
+    }
+
     private boolean allInfoAvailable() {
         return mModel != null
                 && mEnergyProfile != null
@@ -500,7 +581,8 @@ public final class HardwareInfoScreen extends Screen {
                 && (mAccelerometer != null || !mHasAccelerometerPermission)
                 && (mGyroscope != null || !mHasGyroscopePermission)
                 && (mCompass != null || !mHasCompassPermission)
-                && (mCarHardwareLocation != null || !mHasCarHardwareLocationPermission);
+                && (mCarHardwareLocation != null || !mHasCarHardwareLocationPermission)
+                ;
     }
 
     private void broadcastCarData() {

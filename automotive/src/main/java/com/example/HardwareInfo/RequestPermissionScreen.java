@@ -82,7 +82,7 @@ public class RequestPermissionScreen extends Screen {
         OnClickListener listener = ParkedOnlyOnClickListener.create(() -> {
             getCarContext().requestPermissions(permissions, (approved, rejected) ->
                     CarToast.makeText(getCarContext(),
-                            String.format("Rejected: %s", rejected),
+                            String.format("Approved: %s Rejected: %s", approved, rejected),
                             CarToast.LENGTH_LONG).show());
             if (!getCarContext().getPackageManager().hasSystemFeature(FEATURE_AUTOMOTIVE)) {
                 CarToast.makeText(getCarContext(),

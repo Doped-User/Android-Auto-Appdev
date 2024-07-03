@@ -53,5 +53,9 @@
     <string name="grant_access_action_title">Grant Access\n</string>
     <string name="enable_location_action_title">Enable Location</string>
     <string name="fuel_level">Fuel Level</string>
+    <string name="odometer_info">Odometer Info\n</string>
+    <string name="odometer_unavailable">Odometer Unavailable</string>
+    <string name="fetch_sensors_title">Enable Listeners</string>
+    <string name="disable_sensors_title">Disable Listeners</string>
 
 </resources>

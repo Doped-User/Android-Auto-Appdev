@@ -4,12 +4,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
@@ -37,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private void appendData(StringBuilder builder, Intent intent, String key, String label) {
+    private void appendData(StringBuilder builder, @NonNull Intent intent, String key, String label) {
         String data = intent.getStringExtra(key);
         if (key.equals("TOLL_CARD_INFO")) {
             String tollCardState = data.equals("1") ? "Inserted" : "Not Inserted";
@@ -64,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     @Override
     protected void onResume() {
         super.onResume();
