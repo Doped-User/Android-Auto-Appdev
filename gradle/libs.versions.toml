@@ -1,6 +1,7 @@
 [versions]
 agp = "8.6.0-alpha05"
 app = "1.4.0"
+carAppSession = "1.4.0"
 kotlin = "1.9.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
@@ -11,6 +12,11 @@ leanback = "1.0.0"
 
 [libraries]
 androidx-app = { module = "androidx.car.app:app", version.ref = "app" }
+androidx-app-projected = { module = "androidx.car.app:app-projected", version.ref = "app" }
+androidx-app-testing = { module = "androidx.car.app:app-testing", version.ref = "app" }
+androidx-car = { module = "androidx.car:car", version.ref = "carAppSession" }
+androidx-car-app = { module = "androidx.car:car-app", version.ref = "carAppSession" }
+androidx-car-app-session = { module = "androidx.car:car-app-session", version.ref = "carAppSession" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
