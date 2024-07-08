@@ -531,8 +531,10 @@ public final class HardwareInfoScreen extends Screen {
     private String getCarLocationInfo() {
         StringBuilder info = new StringBuilder(getCarContext().getString(R.string.car_location_info)).append(": ");
         if (mCarHardwareLocation != null) {
-            info.append("\n\tLatitude: ").append(mCarHardwareLocation.getLocation().getValue().getLatitude());
-            info.append("\n\tLongitude: ").append(mCarHardwareLocation.getLocation().getValue().getLongitude());
+            if (mCarHardwareLocation.getLocation().getValue() != null) {
+                info.append("\n\tLatitude: ").append(mCarHardwareLocation.getLocation().getValue().getLatitude());
+                info.append("\n\tLongitude: ").append(mCarHardwareLocation.getLocation().getValue().getLongitude());
+            }
         } else {
             info.append(getCarContext().getString(R.string.car_location_unavailable));
         }

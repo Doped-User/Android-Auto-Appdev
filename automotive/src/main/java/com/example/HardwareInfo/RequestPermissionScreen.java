@@ -23,12 +23,6 @@ import java.util.List;
 
 public class RequestPermissionScreen extends Screen {
 
-    private final Action mRefreshAction = new Action.Builder()
-            .setTitle(getCarContext().getString(R.string.refresh_action_title))
-            .setBackgroundColor(CarColor.BLUE)
-            .setOnClickListener(this::invalidate)
-            .build();
-
     public RequestPermissionScreen(@NonNull CarContext carContext) {
         super(carContext);
     }
@@ -36,70 +30,85 @@ public class RequestPermissionScreen extends Screen {
     @NonNull
     @Override
     public Template onGetTemplate() {
+        List<String> permissionsToRequest = getPermissionsToRequest();
+
+        if (permissionsToRequest.isEmpty()) {
+            return createPermissionsGrantedTemplate();
+        } else {
+            return createPermissionsRequiredTemplate(permissionsToRequest);
+        }
+    }
+
+    private List<String> getPermissionsToRequest() {
         List<String> permissions = new ArrayList<>();
         String[] declaredPermissions;
+
         try {
-            PackageInfo info = getCarContext().getPackageManager().getPackageInfo(
+            PackageInfo packageInfo = getCarContext().getPackageManager().getPackageInfo(
                     getCarContext().getPackageName(), PackageManager.GET_PERMISSIONS);
-            declaredPermissions = info.requestedPermissions;
+            declaredPermissions = packageInfo.requestedPermissions;
         } catch (PackageManager.NameNotFoundException e) {
-            return new MessageTemplate.Builder(
-                    getCarContext().getString(R.string.package_not_found_error_msg))
-                    .setHeaderAction(Action.BACK)
-                    .addAction(mRefreshAction)
-                    .build();
+            return permissions; // Return empty list in case of exception
         }
 
         if (declaredPermissions != null) {
-            for (String declaredPermission : declaredPermissions) {
-                if (!declaredPermission.startsWith("androidx.car.app")) {
+            for (String permission : declaredPermissions) {
+                if (!permission.startsWith("androidx.car.app")) {
                     try {
-                        CarAppPermission.checkHasPermission(getCarContext(), declaredPermission);
+                        CarAppPermission.checkHasPermission(getCarContext(), permission);
                     } catch (SecurityException e) {
-                        permissions.add(declaredPermission);
+                        permissions.add(permission);
                     }
                 }
             }
         }
+        return permissions;
+    }
 
-        if (permissions.isEmpty()) {
-            return new MessageTemplate.Builder(
-                    getCarContext().getString(R.string.permissions_granted_msg))
-                    .setHeaderAction(Action.BACK)
-                    .addAction(new Action.Builder()
-                            .setTitle(getCarContext().getString(R.string.close_action_title))
-                            .setOnClickListener(this::finish)
-                            .build())
-                    .build();
-        }
+    private Template createPermissionsGrantedTemplate() {
+        return new MessageTemplate.Builder(
+                getCarContext().getString(R.string.permissions_granted_msg))
+                .setHeaderAction(Action.BACK)
+                .addAction(new Action.Builder()
+                        .setTitle(getCarContext().getString(R.string.close_action_title))
+                        .setOnClickListener(this::finish).build())
+                .build();
+    }
 
+    private Template createPermissionsRequiredTemplate(List<String> permissions) {
         StringBuilder message = new StringBuilder()
                 .append(getCarContext().getString(R.string.needs_access_msg_prefix));
+
         for (String permission : permissions) {
             message.append(permission).append("\n");
         }
 
-        OnClickListener listener = ParkedOnlyOnClickListener.create(() -> {
-            getCarContext().requestPermissions(permissions, (approved, rejected) ->
-                    CarToast.makeText(getCarContext(),
-                            String.format("Approved: %s Rejected: %s", approved, rejected),
-                            CarToast.LENGTH_LONG).show());
-            if (!getCarContext().getPackageManager().hasSystemFeature(FEATURE_AUTOMOTIVE)) {
+        OnClickListener listener = ParkedOnlyOnClickListener.create(() ->
+                getCarContext().requestPermissions(permissions, (approved, rejected) -> {
+                if (!approved.isEmpty()) {
+                    // Permissions granted, refresh the screen
+                    invalidate();
+                }
                 CarToast.makeText(getCarContext(),
-                        getCarContext().getString(R.string.phone_screen_permission_msg),
+                        String.format("Approved: %s Rejected: %s", approved, rejected),
                         CarToast.LENGTH_LONG).show();
-            }
-        });
 
-        Action action = new Action.Builder()
+                if (!getCarContext().getPackageManager().hasSystemFeature(FEATURE_AUTOMOTIVE)) {
+                    CarToast.makeText(getCarContext(),
+                            getCarContext().getString(R.string.phone_screen_permission_msg),
+                            CarToast.LENGTH_LONG).show();
+                }
+        }));
+
+        Action grantAccessAction = new Action.Builder()
                 .setTitle(getCarContext().getString(R.string.grant_access_action_title))
                 .setBackgroundColor(CarColor.BLUE)
                 .setOnClickListener(listener)
                 .build();
 
-        return new LongMessageTemplate.Builder(message)
+        return new LongMessageTemplate.Builder(message.toString().trim())
                 .setTitle(getCarContext().getString(R.string.required_permissions_title))
-                .addAction(action)
+                .addAction(grantAccessAction)
                 .setHeaderAction(Action.BACK)
                 .build();
     }
