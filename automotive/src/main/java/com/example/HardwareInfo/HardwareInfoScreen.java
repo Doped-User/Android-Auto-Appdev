@@ -69,7 +69,7 @@ public final class HardwareInfoScreen extends Screen {
     private boolean mHasCompassPermission;
     private boolean mHasCarHardwareLocationPermission;
 
-    private boolean sensorsEnabled = true;
+    private boolean sensorsEnabled = false;
 
     Intent sendCarDataIntent = new Intent(ACTION_SEND_CAR_DATA);
 
@@ -312,7 +312,7 @@ public final class HardwareInfoScreen extends Screen {
             addCompassRow(paneBuilder);
             addCarLocationRow(paneBuilder);
         } else {
-            paneBuilder.addRow(new Row.Builder().setTitle("Gathering car information...").build());
+            paneBuilder.addRow(new Row.Builder().setTitle("Gathering car info... ").addText("1.Grant all Permissions\n2.Enable all Listeners").build());
         }
 
         paneBuilder.addAction(new Action.Builder()
@@ -335,7 +335,6 @@ public final class HardwareInfoScreen extends Screen {
 
         return new PaneTemplate.Builder(paneBuilder.build())
                 .setTitle("Car Information")
-                .setHeaderAction(Action.BACK)
                 .build();
     }
 
@@ -534,6 +533,8 @@ public final class HardwareInfoScreen extends Screen {
             if (mCarHardwareLocation.getLocation().getValue() != null) {
                 info.append("\n\tLatitude: ").append(mCarHardwareLocation.getLocation().getValue().getLatitude());
                 info.append("\n\tLongitude: ").append(mCarHardwareLocation.getLocation().getValue().getLongitude());
+            }else{
+                info.append(getCarContext().getString(R.string.car_location_unavailable));
             }
         } else {
             info.append(getCarContext().getString(R.string.car_location_unavailable));

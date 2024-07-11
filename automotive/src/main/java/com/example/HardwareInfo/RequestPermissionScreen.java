@@ -31,7 +31,6 @@ public class RequestPermissionScreen extends Screen {
     @Override
     public Template onGetTemplate() {
         List<String> permissionsToRequest = getPermissionsToRequest();
-
         if (permissionsToRequest.isEmpty()) {
             return createPermissionsGrantedTemplate();
         } else {
@@ -48,17 +47,15 @@ public class RequestPermissionScreen extends Screen {
                     getCarContext().getPackageName(), PackageManager.GET_PERMISSIONS);
             declaredPermissions = packageInfo.requestedPermissions;
         } catch (PackageManager.NameNotFoundException e) {
-            return permissions; // Return empty list in case of exception
+            return permissions;
         }
 
         if (declaredPermissions != null) {
             for (String permission : declaredPermissions) {
-                if (!permission.startsWith("androidx.car.app")) {
-                    try {
-                        CarAppPermission.checkHasPermission(getCarContext(), permission);
-                    } catch (SecurityException e) {
-                        permissions.add(permission);
-                    }
+                try {
+                    CarAppPermission.checkHasPermission(getCarContext(), permission);
+                } catch (SecurityException e) {
+                    permissions.add(permission);
                 }
             }
         }
@@ -86,7 +83,6 @@ public class RequestPermissionScreen extends Screen {
         OnClickListener listener = ParkedOnlyOnClickListener.create(() ->
                 getCarContext().requestPermissions(permissions, (approved, rejected) -> {
                 if (!approved.isEmpty()) {
-                    // Permissions granted, refresh the screen
                     invalidate();
                 }
                 CarToast.makeText(getCarContext(),

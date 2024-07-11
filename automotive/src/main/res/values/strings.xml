@@ -57,5 +57,10 @@
     <string name="odometer_unavailable">Odometer Unavailable</string>
     <string name="fetch_sensors_title">Enable Listeners</string>
     <string name="disable_sensors_title">Disable Listeners</string>
+    <string name="sign_in_title">Sign In</string>
+    <string name="pin_sign_in_instruction">Enter the provided PIN to sign in</string>
+    <string name="pin_hint">Enter Pin To Sign In</string>
+    <string name="invalid_pin_error_msg">Invalid PIN</string>
+    <string name="sign_in_success_toast">Sign In Success</string>
 
 </resources>

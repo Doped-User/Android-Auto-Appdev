@@ -23,16 +23,16 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             if ("com.example.HardwareInfo.SEND_CAR_DATA".equals(intent.getAction())) {
                 StringBuilder carInfoBuilder = new StringBuilder();
-                appendData(carInfoBuilder, intent, "MODEL_INFO", "Model Info");
-                appendData(carInfoBuilder, intent, "ENERGY_PROFILE_INFO", "Energy Profile Info");
-                appendData(carInfoBuilder, intent, "SPEED_INFO", "Speed Info");
-                appendData(carInfoBuilder, intent, "ENERGY_LEVEL_INFO", "Energy Level Info");
-                appendData(carInfoBuilder, intent, "TOLL_CARD_INFO", "Toll Card Status");
-                appendData(carInfoBuilder, intent, "MILEAGE_INFO", "Mileage Info");
-                appendData(carInfoBuilder, intent, "ACCELEROMETER_INFO", "Accelerometer Info");
-                appendData(carInfoBuilder, intent, "GYROSCOPE_INFO", "Gyroscope Info");
-                appendData(carInfoBuilder, intent, "COMPASS_INFO", "Compass Info");
-                appendData(carInfoBuilder, intent, "CAR_LOCATION_INFO", "Car Location Info");
+                appendData(carInfoBuilder, intent, "MODEL_INFO", "Model");
+                appendData(carInfoBuilder, intent, "ENERGY_PROFILE_INFO", "Energy Profile");
+                appendData(carInfoBuilder, intent, "SPEED_INFO", "Speed");
+                appendData(carInfoBuilder, intent, "ENERGY_LEVEL_INFO", "Energy Level");
+                appendData(carInfoBuilder, intent, "TOLL_CARD_INFO", "Toll Card");
+                appendData(carInfoBuilder, intent, "MILEAGE_INFO", "Mileage");
+                appendData(carInfoBuilder, intent, "ACCELEROMETER_INFO", "Accelerometer");
+                appendData(carInfoBuilder, intent, "GYROSCOPE_INFO", "Gyroscope");
+                appendData(carInfoBuilder, intent, "COMPASS_INFO", "Compass");
+                appendData(carInfoBuilder, intent, "CAR_LOCATION_INFO", "Car Location");
 
                 Log.d("MainActivity", "Car data received: " + carInfoBuilder);
                 carDataTextView.setText(carInfoBuilder.toString());
@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private void appendData(StringBuilder builder, @NonNull Intent intent, String key, String label) {
         String data = intent.getStringExtra(key);
         if (key.equals("TOLL_CARD_INFO")) {
-            String tollCardState = data.equals("1") ? "Inserted" : "Not Inserted";
+            String tollCardState = data.equals("1") ? "\n\tToll Card Inserted" : "\n\tToll Card Not Inserted";
             builder.append(label).append(": ").append(tollCardState).append("\n\n");
         } else {
             if (data != null) {

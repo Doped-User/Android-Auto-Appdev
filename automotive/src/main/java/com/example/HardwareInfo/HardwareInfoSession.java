@@ -12,6 +12,6 @@ public final class HardwareInfoSession extends Session {
     @Override
     @NonNull
     public Screen onCreateScreen(@NonNull Intent intent) {
-        return new HardwareInfoScreen(getCarContext());
+        return new SignInScreen(getCarContext());
     }
 }
