@@ -40,7 +40,7 @@
     <string name="deny">Deny</string>
     <string name="car_data">Car Data</string>
     <string name="package_not_found_error_msg">Package Not found.</string>
-    <string name="permissions_granted_msg">All permissions have been granted. Please revoke permissions from Settings.</string>
+    <string name="permissions_granted_msg">All permissions have been granted</string>
     <string name="needs_access_msg_prefix">The app needs access to the following permissions:\n</string>
     <string name="phone_screen_permission_msg">Grant Permission on the phone screen</string>
     <string name="enable_location_permission_on_device_msg">Enable Location Permissions on device</string>
@@ -62,5 +62,6 @@
     <string name="pin_hint">Enter Pin To Sign In</string>
     <string name="invalid_pin_error_msg">Invalid PIN</string>
     <string name="sign_in_success_toast">Sign In Success</string>
+    <string name="skip_action_title">Skip</string>
 
 </resources>

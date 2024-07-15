@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private void appendData(StringBuilder builder, @NonNull Intent intent, String key, String label) {
         String data = intent.getStringExtra(key);
         if (key.equals("TOLL_CARD_INFO")) {
-            String tollCardState = data.equals("1") ? "\n\tToll Card Inserted" : "\n\tToll Card Not Inserted";
+            String tollCardState = data.equals("1") ? "\n\tToll Card Inserted" : (data.equals("2") ? "\n\tToll Card Not Inserted": "\n\tToll Card State Not Available");
             builder.append(label).append(": ").append(tollCardState).append("\n\n");
         } else {
             if (data != null) {

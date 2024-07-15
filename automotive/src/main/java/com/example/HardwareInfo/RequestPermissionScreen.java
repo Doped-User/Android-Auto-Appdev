@@ -65,10 +65,9 @@ public class RequestPermissionScreen extends Screen {
     private Template createPermissionsGrantedTemplate() {
         return new MessageTemplate.Builder(
                 getCarContext().getString(R.string.permissions_granted_msg))
-                .setHeaderAction(Action.BACK)
                 .addAction(new Action.Builder()
                         .setTitle(getCarContext().getString(R.string.close_action_title))
-                        .setOnClickListener(this::finish).build())
+                        .setOnClickListener(ParkedOnlyOnClickListener.create(this::finish)).build())
                 .build();
     }
 
@@ -105,7 +104,9 @@ public class RequestPermissionScreen extends Screen {
         return new LongMessageTemplate.Builder(message.toString().trim())
                 .setTitle(getCarContext().getString(R.string.required_permissions_title))
                 .addAction(grantAccessAction)
-                .setHeaderAction(Action.BACK)
+                .addAction(new Action.Builder()
+                        .setTitle(getCarContext().getString(R.string.skip_action_title))
+                        .setOnClickListener(ParkedOnlyOnClickListener.create(this::finish)).build())
                 .build();
     }
 }
