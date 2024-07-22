@@ -33,7 +33,7 @@ public class SignInScreen extends Screen {
             @Override
             public void onInputSubmitted(@NonNull String input) {
                 SharedPreferences sharedPreferences = getCarContext().getSharedPreferences("MyPreferences", Context.MODE_PRIVATE);
-                String expectedPin = sharedPreferences.getString("password", "2345"); // Default password
+                String expectedPin = sharedPreferences.getString("password", "2345");
 
                 if (expectedPin.equals(input)) {
                     CarToast.makeText(getCarContext(), R.string.sign_in_success_toast, CarToast.LENGTH_LONG).show();
