@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="@android:color/holo_blue_dark"
+    android:background="@color/background"
     tools:context=".MainActivity">
 
     <ImageButton
@@ -15,7 +15,7 @@
         android:layout_alignParentEnd="true"
         android:layout_marginEnd="16dp"
         android:layout_marginTop="16dp"
-        android:background="?attr/selectableItemBackground"
+        android:background="?attr/selectableItemBackgroundBorderless"
         android:padding="8dp"
         android:scaleType="centerInside"
         android:src="@android:drawable/ic_menu_preferences"
@@ -24,7 +24,7 @@
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:layout_below="@id/btnSettings"
         android:layout_above="@+id/btnShow"
         android:fillViewport="true">
@@ -33,18 +33,13 @@
             android:id="@+id/carDataTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@android:color/holo_blue_bright"
-            android:elevation="8dp"
-            android:gravity="start"
+            android:background="@color/card_background"
+            android:elevation="4dp"
             android:padding="16dp"
-            android:shadowColor="@android:color/holo_blue_light"
-            android:shadowDx="2"
-            android:shadowDy="2"
-            android:shadowRadius="1"
             android:text="@string/car_data"
             android:textColor="@android:color/black"
-            android:textSize="16sp"
-            android:textStyle="normal" />
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
     </ScrollView>
 
@@ -56,7 +51,7 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="24dp"
         android:background="@drawable/rounded_button"
-        android:elevation="20dp"
+        android:elevation="8dp"
         android:padding="12dp"
         android:text="@string/refresh_data"
         android:textColor="@android:color/white"
