@@ -312,9 +312,9 @@ public final class HardwareInfoScreen extends Screen {
                 .setTitle(sensorsEnabled ? getCarContext().getString(R.string.disable_sensors_title) : getCarContext().getString(R.string.fetch_sensors_title))
                 .setOnClickListener(() -> {
                     if (sensorsEnabled) {
-                        disableSensors();
+                        removeCarInfoListeners();
                     } else {
-                        fetchSensors();
+                        fetchCarInfo(mRequestRenderRunnable);
                     }
                     sensorsEnabled = !sensorsEnabled;
                     invalidate();
@@ -325,14 +325,6 @@ public final class HardwareInfoScreen extends Screen {
         return new PaneTemplate.Builder(paneBuilder.build())
                 .setTitle("Car Information")
                 .build();
-    }
-
-    private void fetchSensors() {
-        fetchCarInfo(mRequestRenderRunnable);
-    }
-
-    private void disableSensors() {
-        removeCarInfoListeners();
     }
 
     @NonNull

@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -60,10 +61,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         carDataTextView = findViewById(R.id.carDataTextView);
-        Button btn = findViewById(R.id.btnShow);
-        btn.setOnClickListener(v -> {
+        Button btnShow = findViewById(R.id.btnShow);
+        ImageButton btnSettings = findViewById(R.id.btnSettings);
+
+        btnShow.setOnClickListener(v -> {
             Toast.makeText(MainActivity.this, "Requesting Car Data", Toast.LENGTH_SHORT).show();
             requestCarData();
+        });
+
+        btnSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
         });
     }
 

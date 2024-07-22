@@ -1,5 +1,7 @@
 package com.example.HardwareInfo;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
 import androidx.car.app.CarContext;
@@ -14,7 +16,6 @@ import androidx.car.app.model.signin.InputSignInMethod;
 import androidx.car.app.model.signin.SignInTemplate;
 
 public class SignInScreen extends Screen {
-    private final String expectedPin = "2345";
 
     public SignInScreen(@NonNull CarContext carContext) {
         super(carContext);
@@ -31,6 +32,9 @@ public class SignInScreen extends Screen {
             @OptIn(markerClass = ExperimentalCarApi.class)
             @Override
             public void onInputSubmitted(@NonNull String input) {
+                SharedPreferences sharedPreferences = getCarContext().getSharedPreferences("MyPreferences", Context.MODE_PRIVATE);
+                String expectedPin = sharedPreferences.getString("password", "2345"); // Default password
+
                 if (expectedPin.equals(input)) {
                     CarToast.makeText(getCarContext(), R.string.sign_in_success_toast, CarToast.LENGTH_LONG).show();
                     getCarContext().getCarService(ScreenManager.class).push(new HardwareInfoScreen(getCarContext()));

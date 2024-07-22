@@ -7,10 +7,25 @@
     android:background="@android:color/holo_blue_dark"
     tools:context=".MainActivity">
 
+    <ImageButton
+        android:id="@+id/btnSettings"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="16dp"
+        android:background="?attr/selectableItemBackground"
+        android:padding="8dp"
+        android:scaleType="centerInside"
+        android:src="@android:drawable/ic_menu_preferences"
+        android:contentDescription="@string/settings" />
+
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_below="@id/btnSettings"
         android:layout_above="@+id/btnShow"
         android:fillViewport="true">
 
@@ -19,7 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/holo_blue_bright"
-            android:elevation="20dp"
+            android:elevation="8dp"
             android:gravity="start"
             android:padding="16dp"
             android:shadowColor="@android:color/holo_blue_light"
@@ -28,7 +43,7 @@
             android:shadowRadius="1"
             android:text="@string/car_data"
             android:textColor="@android:color/black"
-            android:textSize="14sp"
+            android:textSize="16sp"
             android:textStyle="normal" />
 
     </ScrollView>
@@ -40,12 +55,12 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="24dp"
-        android:background="@android:color/holo_blue_bright"
+        android:background="@drawable/rounded_button"
         android:elevation="20dp"
-        android:padding="16dp"
+        android:padding="12dp"
         android:text="@string/refresh_data"
-        android:textColor="@android:color/black"
-        android:textSize="14sp"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
 </RelativeLayout>
