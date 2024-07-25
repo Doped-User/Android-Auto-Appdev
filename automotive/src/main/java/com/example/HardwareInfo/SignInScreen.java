@@ -37,7 +37,8 @@ public class SignInScreen extends Screen {
 
                 if (expectedPin.equals(input)) {
                     CarToast.makeText(getCarContext(), R.string.sign_in_success_toast, CarToast.LENGTH_LONG).show();
-                    getCarContext().getCarService(ScreenManager.class).push(new HardwareInfoScreen(getCarContext()));
+                    getCarContext().getCarService(ScreenManager.class).push(new SpeechRecognizerScreen(getCarContext()));
+//                    getCarContext().getCarService(ScreenManager.class).push(new HardwareInfoScreen(getCarContext()));
                     getCarContext().getCarService(ScreenManager.class).push(new RequestPermissionScreen(getCarContext()));
                 } else {
                     CarToast.makeText(getCarContext(), R.string.invalid_pin_error_msg, CarToast.LENGTH_LONG).show();
