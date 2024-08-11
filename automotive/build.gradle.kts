@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.Packaging
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -33,6 +35,12 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    packagingOptions {
+        resources.excludes.add("META-INF/INDEX.LIST")
+        resources.excludes.add("META-INF/DEPENDENCIES")
+        resources.excludes.add("META-INF/NOTICE")
+        resources.excludes.add("META-INF/LICENSE")
+    }
 }
 
 dependencies {
@@ -43,6 +51,8 @@ dependencies {
     implementation("androidx.fragment:fragment:1.8.1")
     implementation("androidx.annotation:annotation-experimental:1.4.1")
     implementation("com.google.android.material:material:1.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.9.2")
+    implementation("com.google.code.gson:gson:2.8.8")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.leanback)
